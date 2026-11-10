@@ -41,7 +41,7 @@ class primitiveAgent:
         print(f"Decision: {decision}")
         self.act(decision)
 
-agent = Agent()
+agent = primitiveAgent()
 
 for _ in range(10):
     agent.run()

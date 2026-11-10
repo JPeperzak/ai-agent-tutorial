@@ -1,0 +1,37 @@
+# Documentation Building Agents
+## Introduction
+### The Goal
+I am on a quest to build an agent that can categorize mail in an Outlook mailbox based on the mail's content. 
+
+### The Strategy
+In order to learn how to do this I used Microsoft Copilot to generate a tutorial for me that started with the very basics of agent building. Whenever I finished the exercises and understood the information Copilot provided me, I requested Copilot to continue the tutorial and continued working on the new exercises and information. 
+
+In my initial prompt I directed Copilot to give me a tutorial in Python. A Google search suggested that this is the best language to use due to its simplicity, extensive libraries, and strong community support.
+
+**Currently I am still in this iterative tutorial process. Once I feel I have a good enough grasp on how to build agents, I plan to apply what I've learned to creating an agent that actually satisfies the goal requirement.**
+
+## Progression
+### Lesson 1: building a primitive AI
+*See: oldFiles/1_primitive_agent.py*
+
+To start off, Copilot suggested I build a "primitive AI". This AI did not consist of any AI models yet, but showed the general structure an agent should be built with. Copilot taught me about the observe -> think -> act process that llm's go through:
+1. **Observe**: Gather information about the world and itself
+2. **Think**: The agent considers its situation and decides on the best way to act based on a "decision policy"
+3. **Act**: The agent acts out the decided choice, which changes the world through consequences.
+
+### Lesson 2: using a model to think
+*See: oldFiles/2_agent.py*
+
+In this lesson I upgraded the primitive agent by replacing the rule-based think method with a model that takes a prompt and responds with the best way to act. Copilot advised me to use **Ollama** for importing and using models in my code because they allow the use of Local Models, meaning there is no risk of sensitive data leaking online. Basically you download a model to your local device and specify you want to use that in your code. For the tutorials I was advised to use the "qwen3.5:4b" model. Qwen3.5 was suggested as a good model for practicing building agents, and :4b means I want the model to use 4 billion parameters. Copilot claimed this would be good enough for any practice purposes. I did end up having to use my personal desktop to run the model as the Qquest laptop had no proper GPU installed to run the model, leading to very long waiting times to get responses.
+
+This lesson taught me how to download models from Ollama, build prompts to contact the model with, and how to use the response from the model to decide on how to act.
+
+### Lesson 3: providing tools to the model
+*See: oldFiles/3_tool_agent.py*
+
+In this lesson I learned about how to provide a model with tools to expand their capabilities to acquire information. A tool is a function the agent can execute to acquire information it does not implicitly have access to. Tools can be used to collect any data that is relevant and available either through an API or through self-provided data. 
+
+This lesson is where things became more interesting regarding how to properly use prompts to get a response in a desired format for further processing. It took me a little while to get to a point where I could get the model to extract exactly the best tool for the job and the required parameter value for the tool function from the question provided by the user. It was also challenging to get the response in a proper JSON format so that I could properly extract the tool and parameter value from the response string. 
+
+This lesson made me realise that I'd need more knowledge about how to properly construct a prompt before I could effectively use models to provide me with specifically the information I need. To brush up on this knowledge I decided to go through several trainings from the AWS Artificial Intelligence Practitioner Learning Plan (https://skillbuilder.aws/learning-plan/G8ENMJ5QBE/aws-artificial-intelligence-practitioner-learning-plan/SU2A1EJM1A?trk=d37ff52f-b536-4e4f-8094-37e05a0006ee&sc_channel=el). This was surprisingly useful, as it made me more comfortable in writing prompts through knowing what I could add to a prompt without confusing the model.
+

@@ -1,3 +1,4 @@
+import time
 from ollama import chat
 
 class Agent:
@@ -8,7 +9,7 @@ class Agent:
         # We can create storage for past interactions that serves as "memory" for the agent
         self.memory = []
 
-    def remember(self, event):
+    def remember(self, event: str):
         self.memory.append(event)
 
     def show_memory(self):
@@ -28,24 +29,24 @@ class Agent:
         state = self.observe()
         recent_memories = "\n".join(self.memory[-5:])
         return f"""
-Current state:
+            Current state:
 
-Energy: {state["energy"]}
-Money: {state["money"]}
+            Energy: {state["energy"]}
+            Money: {state["money"]}
 
-Recent memories:
+            Recent memories:
 
-{recent_memories}
+            {recent_memories}
 
-What should I do?
-"""
+            What should I do?
+        """
 
     # The think method is where we contact the model to get a response
     # Note how the prompt is built in the think method because it's needed for the user message
     def think(self):
         prompt = self.build_prompt()
         response = chat(
-            model="qwen2.5:0.5b",
+            model="qwen3.5:4b",
             messages=[
                 {
                     "role": "system",
@@ -88,14 +89,16 @@ What should I do?
             )
 
     def run(self):
-        self.observe()
+        start = time.time()
         decision = self.think()
+        end = time.time()
+        print(f"Response took {end - start:.2f} seconds")
         print(f"Decision: {decision}")
         self.act(decision)
 
 agent = Agent()
 
-for _ in range(10):
+for _ in range(2):
     agent.run()
     print("-" * 30)
 

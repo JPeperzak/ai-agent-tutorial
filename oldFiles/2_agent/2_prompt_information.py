@@ -2,8 +2,8 @@
 from ollama import chat
 
 response = chat(
-    model="qwen2.5:0.5b",
-    # The content of "messages" is the convesation we're sending to the model. The model predicts an answer based on its contents.
+    model="qwen3:4b",
+    # The content of "messages" is the conversation we're sending to the model. The model predicts an answer based on its contents.
     # Every object passed to the messages array represents one message in the conversation history.
     # e.g. if you asked AI how they're doing and they respond they're doing well, that totals up to 2 objects in the messages array. 
 
