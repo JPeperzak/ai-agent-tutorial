@@ -35,3 +35,16 @@ This lesson is where things became more interesting regarding how to properly us
 
 This lesson made me realise that I'd need more knowledge about how to properly construct a prompt before I could effectively use models to provide me with specifically the information I need. To brush up on this knowledge I decided to go through several trainings from the AWS Artificial Intelligence Practitioner Learning Plan (https://skillbuilder.aws/learning-plan/G8ENMJ5QBE/aws-artificial-intelligence-practitioner-learning-plan/SU2A1EJM1A?trk=d37ff52f-b536-4e4f-8094-37e05a0006ee&sc_channel=el). This was surprisingly useful, as it made me more comfortable in writing prompts through knowing what I could add to a prompt without confusing the model.
 
+### Lesson 9: Alternative Approach
+I redesigned model 8 by using a different Copilot account and asking it questions on how I should improve my model. While the resulting model is significantly worse due to it not being an agentic loop, there are some properties that I should consider implementing in further models:
+- The schema attribute for every tool in the tool registry
+- Separating the task of selecting a tool and the task of generating arguments for the selected tool into two prompts that are used sequentially rather than expecting the model to perform two tasks in a single prompt.
+
+### Lesson 10: Combining models 8 and 9
+I'd like to try to see if I can increase the quality of model 8 by implementing the previously mentioned good qualities of model 9.
+
+### Lesson 11?: Reflection and Self-Correction
+New files: critic.py
+
+Apparently small models struggle when asked to produce JSON objects, and are more consistent in producing single-label classifications.
+**IMPORTANT: THIS LESSON NEEDS TO START OVER BECAUSE COPILOT DITCHED ME DUE TO A DAILY LIMIT**
