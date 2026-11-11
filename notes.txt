@@ -3,17 +3,19 @@ You can use the following command to download the qwen3 model with 4 billion par
     ollama pull qwen3:4b
 
 
-TO DO
--- SEPARATE PROMPTS --
-- There are four prompts:
-    V. SYSTEM_PROMPT_SELECT_ACTION -> returns 'yes' or 'no' based on if there's enough information to solve the user's goal.
-    V. SYSTEM_PROMPT_SELECT_TOOL -> returns JSON { "tool": "<tool_name>"}
-    V. SYSTEM_PROMPT_GENERATE_ARGUMENTS -> Generates JSON with arguments based on schema from tool registry
-    V. SYSTEM_PROMPT_FINAL_ANSWER -> Generates the final response by answering the question using provided observations.
 
-V Add previous observations to the generate_arguments_user_prompt function so that 
-    the model can use previous observations to determine which files it can choose from.
 
+
+
+----- NEXT STEPS -----
+Learn about:
+    - Gathering information through external sources
+    - Persistent memory
+    = Improving prompts
+
+
+
+----- TO DO -----
 - Update the tool registry
     - Consider removing the file_tools and expanding on the rag_tools 
         because the file_tools don't really serve a function and possibly
@@ -25,4 +27,15 @@ V Add previous observations to the generate_arguments_user_prompt function so th
     V Set the think parameter to True to debug the model by accessing its thought process through response.message.thinking
     - Pass tool functions to the tools parameter to give the model access to those tool functions.
 
-- Add typing to all the parameters to ease the development process
+
+----- DONE -----
+V There are four prompts:
+    V. SYSTEM_PROMPT_SELECT_ACTION -> returns 'yes' or 'no' based on if there's enough information to solve the user's goal.
+    V. SYSTEM_PROMPT_SELECT_TOOL -> returns JSON { "tool": "<tool_name>"}
+    V. SYSTEM_PROMPT_GENERATE_ARGUMENTS -> Generates JSON with arguments based on schema from tool registry
+    V. SYSTEM_PROMPT_FINAL_ANSWER -> Generates the final response by answering the question using provided observations.
+
+V Add previous observations to the generate_arguments_user_prompt function so that 
+    the model can use previous observations to determine which files it can choose from.
+
+V Add typing to all the parameters to ease the development process

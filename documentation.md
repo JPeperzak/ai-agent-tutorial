@@ -55,8 +55,11 @@ I improved the performance and readability of the code in several ways:
 - I added observations to the user prompt to generate arguments so that the model can use previous observations to determine which file it needs to use as argument to tools. This resolved the issue where the model kept making up filenames to pass as arguments.
 - I added typings to all relevant parameters and variables using basic types and imported types from the Typing package. This should improve the readability of the code.
 
-### Lesson 11?: Reflection and Self-Correction
-New files: critic.py
+### Lesson 11: Critics
+In this iteration of the agent I modified the select_action() method from the executor so that it fulfils the function of a critic. This means that instead of simply returning 'yes' or 'no' as an assessment of whether there is enough information to generate a final answer, the model now also provides a reasoning for their choice and points out what information is missing. The reasoning and missing information are stored in the agent's memory so that it can be accessed during tool selection.
 
-Apparently small models struggle when asked to produce JSON objects, and are more consistent in producing single-label classifications.
-**IMPORTANT: THIS LESSON NEEDS TO START OVER BECAUSE COPILOT DITCHED ME DUE TO A DAILY LIMIT**
+I also removed the non-rag tools because they were confusing the model and essentially provided no benefit to the functioning of the agent.
+
+For a while asking the agent a question about information that cannot be found in the knowledge base created an infinite loop where the critic kept insisting to look for more information in the knowledge base. I managed to fix this by changing the list of responses the critic may choose from. Instead of "yes" or "no", referring to whether there is enough information, the critic now respons with "enough", "more", or "exhausted". This gives the critic the explicit option to decide additional searches are unlikely to produce new information. Additionally, the critic's decision making also improved by specifying in the system prompt that "more" means more information should be collected specifically from the knowledge base. 
+
+What's interesting is that logging the reasoning from the critic also shows that it looks at how tools were used previously in the session and decides to respond with "exhausted" based on what's already been tried.
