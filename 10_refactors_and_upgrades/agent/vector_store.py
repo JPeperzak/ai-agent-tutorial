@@ -1,15 +1,17 @@
 # The VectorStore class is where we store the embedding values of the knowledge documents.
 from sklearn.metrics.pairwise import cosine_similarity
 
+from typing import Any, List, Dict
+
 class VectorStore:
     def __init__(self):
-        self.documents = []
+        self.documents: List[Dict[str, Any]] = []
 
     def add_document(
         self,
-        filename,
-        content,
-        embedding
+        filename: str,
+        content: str,
+        embedding: Any
     ):
         self.documents.append({
             "filename": filename,
@@ -17,15 +19,15 @@ class VectorStore:
             "embedding": embedding
         })
 
-    def get_documents(self):
+    def get_documents(self) -> List[Dict[str, Any]]:
         return self.documents
 
     def search(
         self,
-        query_embedding,
-        top_k=3
-    ):
-        results = []
+        query_embedding: Any,
+        top_k: int = 3
+    ) -> List[Dict[str, Any]]:
+        results: List[Dict[str, Any]] = []
 
         for document in self.documents:
             similarity = cosine_similarity(

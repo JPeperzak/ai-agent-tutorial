@@ -40,8 +40,20 @@ I redesigned model 8 by using a different Copilot account and asking it question
 - The schema attribute for every tool in the tool registry
 - Separating the task of selecting a tool and the task of generating arguments for the selected tool into two prompts that are used sequentially rather than expecting the model to perform two tasks in a single prompt.
 
-### Lesson 10: Combining models 8 and 9
+### Lesson 10: Refactors and Upgrades
 I'd like to try to see if I can increase the quality of model 8 by implementing the previously mentioned good qualities of model 9.
+The readability of the code has definitely improved, and separating the prompts reduced the errors produced in selecting the tool.
+It does look like so far the generation of arguments is still performing poorly.
+
+I improved the performance and readability of the code in several ways:
+- I added the option to provide temperature values and json_schemas to the Brain method that contacts the model through the chat() function. I also added a 'think' parameter, which causes the method to print the complete thought process of the model related to the response in question.
+- I took the example schema's out of the prompt and the tool registry, and instead used pydantic BaseModels that I directly used as a parameter in the chat() function. 
+- The above change also allowed for easy json-validation to ensure the responses are correctly formatted when accessed further down the code.
+- I created a 'prompts' directory in which I created three files: constants.py, which contains the system prompts, generators.py, which contains functions to dynamically generate user prompts, and schemas.py, which contains the pydantic BaseModels used to provide and validate the json schemas.
+- I also created a schemas.py file in the 'tools' directory, which contains a pydantic BaseModel for every tool in the tool registry. This is required to dynamically provide the model with the correct json schema in the generate_arguments step. 
+- I created an executor to separate the execution code from the step decision code. This greatly improved the readability of my code. 
+- I added observations to the user prompt to generate arguments so that the model can use previous observations to determine which file it needs to use as argument to tools. This resolved the issue where the model kept making up filenames to pass as arguments.
+- I added typings to all relevant parameters and variables using basic types and imported types from the Typing package. This should improve the readability of the code.
 
 ### Lesson 11?: Reflection and Self-Correction
 New files: critic.py

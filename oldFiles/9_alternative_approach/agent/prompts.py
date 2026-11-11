@@ -74,7 +74,7 @@ Choose the best tool.
 
 Available tools:
 
-{chr(10).join(tools)}
+{"\n".join(tools)}
 
 User request:
 {user_request}

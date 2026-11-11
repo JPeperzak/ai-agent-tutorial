@@ -1,8 +1,12 @@
 from pathlib import Path
+from typing import List
+
+from agent.embedder import Embedder
+from agent.vector_store import VectorStore
 
 KNOWLEDGE_DIR = Path(__file__).parent.parent / "knowledge"
 
-def search_documents(query):
+def search_documents(query: str) -> List[str]:
     matches = []
 
     for filename in [file.name for file in KNOWLEDGE_DIR.iterdir()]:
@@ -18,7 +22,7 @@ def search_documents(query):
 
     return matches
 
-def read_document(filename):
+def read_document(filename: str) -> str:
     file_path = KNOWLEDGE_DIR / filename
     with open(
         file_path,
@@ -30,13 +34,13 @@ def read_document(filename):
 class SemanticSearchTool:
     def __init__(
         self,
-        embedder,
-        vector_store
+        embedder: Embedder,
+        vector_store: VectorStore
     ): 
         self.vector_store = vector_store
         self.embedder = embedder
 
     # The __call__ method allows an instance of the class to be used as a function
-    def __call__(self, query):
+    def __call__(self, query: str):
         query_embedding = self.embedder.embed(query)
         return self.vector_store.search(query_embedding)

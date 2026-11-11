@@ -6,18 +6,17 @@ from agent.planner import Planner
 from agent.embedder import Embedder
 from agent.vector_store import VectorStore
 from agent.knowledge_loader import KnowledgeLoader
+from agent.executor import Executor
 from agent.tool_registry import build_tool_registry
 
 class Agent:
     def __init__(self):
         self.memory = Memory()
         self.brain = Brain()
-        self.planner = Planner(
-            self.brain
-        )
+        self.planner = Planner()
         self.embedder = Embedder()
         self.vector_store = VectorStore()
-        self.tools = build_tool_registry(
+        self.tool_registry = build_tool_registry(
             self.embedder,
             self.vector_store
         )
@@ -36,24 +35,24 @@ class Agent:
 
     def answer_question(
         self,
-        question
+        goal: str
     ):
         MAX_STEPS = 10
+        executor = Executor(self.brain, self.tool_registry, goal)
 
         for _ in range(MAX_STEPS):
             decision = self.planner.decide_next_step(
-                question,
+                executor,
                 self.memory.get_all(),
-                self.tools
+                self.tool_registry
             )
 
-            if decision["type"] == "error" or decision["type"] == "answer":
+            if decision["action"] == "error" or decision["action"] == "answer":
                 return decision["response"]
 
-            tool_name = decision["tool_name"]
-            tool = self.tools[tool_name]
-            tool_function = tool["function"]
-            arguments = decision["tool_arguments"]
+            tool_name = decision["selected_tool"]
+            tool_function = self.tool_registry[tool_name]["function"]
+            arguments = decision["arguments"]
             result = tool_function(**arguments)
             self.memory.add(f"tool: {tool_name}")
             self.memory.add(f"tool arguments: {arguments}")
