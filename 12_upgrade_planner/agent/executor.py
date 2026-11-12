@@ -1,11 +1,11 @@
 from agent.prompts.generators import (
-    generate_select_action_user_prompt,
-    generate_final_answer_user_prompt,
-    generate_tool_selection_user_prompt,
     generate_arguments_user_prompt,
+    generate_user_prompt,
 )
 
 from agent.prompts.constants import (
+    SYSTEM_PROMPT_GENERATE_PLAN,
+    SYSTEM_PROMPT_DECIDE_ACTION,
     SYSTEM_PROMPT_CRITIC_ASSESSMENT,
     SYSTEM_PROMPT_FINAL_ANSWER,
     SYSTEM_PROMPT_SELECT_TOOL,
@@ -16,6 +16,11 @@ from agent.prompts.models import (
     CriticDecisionModel,
     FinalAnswerModel,
     SelectedToolModel
+)
+
+from agent.planner.models import (
+    PlanModel,
+    ActionSelectionModel
 )
 
 from agent.brain import Brain
@@ -39,8 +44,12 @@ class Executor:
     def assess_information(self) -> bool:
         observations_text = self.memory.get_observations_text()
         executed_actions_text = self.memory.get_executed_actions_text()
-
-        user_prompt = generate_select_action_user_prompt(self.goal, observations_text, executed_actions_text, self.tool_registry)
+        user_prompt = generate_user_prompt(
+            goal=self.goal, 
+            observations_text=observations_text, 
+            executed_actions_text=executed_actions_text, 
+            tool_registry=self.tool_registry
+        )
         decision = self.brain.think(
             system_prompt = SYSTEM_PROMPT_CRITIC_ASSESSMENT,
             user_prompt = user_prompt,
@@ -50,13 +59,14 @@ class Executor:
         )
         validated_decision = CriticDecisionModel.model_validate_json(decision)
         self.memory.add_observation(f"Critic feedback: {validated_decision.reasoning}. Missing information: {validated_decision.missing_information}")
-        print(f"critic's verdict: {validated_decision.response}")
-        print(f"critic's reasoning: {validated_decision.reasoning}\n")
         return False if validated_decision.response.lower() == "more" else True
 
     def generate_final_answer(self) -> str:
         observations_text = self.memory.get_observations_text()
-        user_prompt = generate_final_answer_user_prompt(self.goal, observations_text)
+        user_prompt = generate_user_prompt(
+            goal=self.goal, 
+            observations_text=observations_text
+        )
         decision = self.brain.think(
             system_prompt = SYSTEM_PROMPT_FINAL_ANSWER,
             user_prompt = user_prompt,
@@ -70,7 +80,16 @@ class Executor:
     def select_tool(self) -> str:
         observations_text = self.memory.get_observations_text()
         executed_actions_text = self.memory.get_executed_actions_text()
-        user_prompt = generate_tool_selection_user_prompt(self.goal, observations_text, executed_actions_text, self.tool_registry)
+        # Looks very complicated, but really it just creates a string representation of a numbered list, listing the description of every step
+        plan_text = "\n".join([f"{i}. {step.model_dump()["description"]}" for i, step in enumerate(self.memory.get_plan().steps, start=1)])
+        user_prompt = generate_user_prompt(
+            goal=self.goal, 
+            observations_text=observations_text, 
+            current_step_description=self.memory.get_current_step().description,
+            plan_text=plan_text,
+            executed_actions_text=executed_actions_text, 
+            tool_registry=self.tool_registry
+        )
         decision = self.brain.think(
             system_prompt = SYSTEM_PROMPT_SELECT_TOOL,
             user_prompt = user_prompt,
@@ -84,7 +103,16 @@ class Executor:
     def generate_arguments(self, selected_tool: str) -> Dict:
         observations_text = self.memory.get_observations_text()
         executed_actions_text = self.memory.get_executed_actions_text()
-        user_prompt = generate_arguments_user_prompt(self.goal, observations_text, executed_actions_text, selected_tool, self.tool_registry)
+        plan_text = "\n".join([f"{i}. {step.model_dump()["description"]}" for i, step in enumerate(self.memory.get_plan().steps, start=1)])
+        user_prompt = generate_arguments_user_prompt(
+            self.goal, 
+            self.memory.get_current_step().description,
+            plan_text,
+            observations_text, 
+            executed_actions_text, 
+            selected_tool, 
+            self.tool_registry
+        )
         response_model = self.tool_registry[selected_tool]["response_model"]
         decision = self.brain.think(
             system_prompt = SYSTEM_PROMPT_GENERATE_ARGUMENTS,
@@ -96,3 +124,47 @@ class Executor:
 
         validated_arguments = response_model.model_validate_json(decision).model_dump()
         return validated_arguments
+
+    def create_plan(self) -> PlanModel:
+        observations_text = self.memory.get_observations_text()
+        user_prompt = generate_user_prompt(
+            goal=self.goal, 
+            observations_text=observations_text
+        )
+        decision = self.brain.think(
+            system_prompt = SYSTEM_PROMPT_GENERATE_PLAN,
+            user_prompt = user_prompt,
+            temperature = 0.5,
+            response_schema = PlanModel.model_json_schema(),
+            think = False
+        )
+        validated_plan = PlanModel.model_validate_json(decision)
+        return validated_plan
+
+    def decide_action_for_current_step(self) -> str:
+        # decide if another tool is needed, if the step is complete, or if the plan is done
+        observations_text = self.memory.get_observations_text()
+        plan_text = "\n".join([f"{i}. {step.model_dump()["description"]}" for i, step in enumerate(self.memory.get_plan().steps, start=1)])
+        user_prompt = generate_user_prompt(
+            goal=self.goal,
+            observations_text=observations_text,
+            current_step_description=self.memory.get_current_step().description,
+            plan_text=plan_text,
+            executed_actions_text=self.memory.get_executed_actions_text(),
+            tool_registry=self.tool_registry
+        )
+        decision = self.brain.think(
+            system_prompt=SYSTEM_PROMPT_DECIDE_ACTION,
+            user_prompt=user_prompt,
+            temperature=0.5,
+            response_schema=ActionSelectionModel.model_json_schema(),
+            think = False
+        )
+        validated_action = ActionSelectionModel.model_validate_json(decision)
+        observation = f"""Action selected: '{validated_action.action}' 
+Step: {self.memory.get_current_step().description}
+Reason: {validated_action.reasoning}"""
+        self.memory.add_observation(observation)
+        return validated_action.action
+        
+        

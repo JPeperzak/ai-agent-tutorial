@@ -68,3 +68,17 @@ What's interesting is that logging the reasoning from the critic also shows that
 The goal of this model was to upgrade the planner so that instead of going through the same motions every iteration, it dynamically creates and updates a plan based on the information it has gathered so far.
 
 First I updated some terminology in the files: the pydantic model classes now have Model in their names for clarity, and the json_schema attribute of the tools in the tool registry is renamed to response_model to better reflect that the associated value is a pydantic model class. To reflect this change in the file names, I also renamed the schema.py files to models.py.
+
+The planner has been upgraded in the following ways:
+- The planner start by creating a plan that contains steps that the agent should go through before answering the question.
+- Every agent iteration, the planner decides what the next action should be. This can return one of three options: (1) 'tool', meaning more information should be collected in order to finish the current step of the plan; (2) complete_step, meaning enough information is available to consider the current step of the plan completed and thus to move on to the next step in the plan; (3) 'done', meaning there are no steps remaining in the plan and thus a final answer can be generated with all collected information.
+- The plan and the current step are also stored in the memory so that it can easily be accessed and provided in prompts.
+
+What's important about this upgrade is that now the agent does not follow a predetermined flow of actions anymore. 
+
+I also added some other improvements to the code:
+- Added a 'logs' directory in which the agent creates an 'observations.txt' file upon returning a value or crashing due to an error. This .txt file contains all observations stored in the memory. The purpose of this file is purely for debugging.
+- Improved the formatting of the observations to increase the readability of the observations.txt file.
+- I refactored the user prompt generators by creating one function for all user prompts instead of one function for each prompt. Exception to this is the generate_arguments user prompt generator because this user prompt has a different structure to the other ones.
+
+### Lesson 13: Accessing external sources for information

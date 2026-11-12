@@ -29,7 +29,8 @@ def build_tool_registry(
         "description": (
             "Searches through the content of all knowledge documents "
             "and returns the filenames of all documents whose content "
-            "includes at least one exact match with the query. "
+            "includes at least one exact match with the query. Performs "
+            "best when the query is a single word or phrase."
         ),
         "schema": {
             "type": "object",
@@ -74,7 +75,7 @@ def build_tool_registry(
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "A natural language query."
+                    "description": "A topic to look for information about."
                 }
             },
             "required": ["query"]
