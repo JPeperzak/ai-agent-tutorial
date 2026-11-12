@@ -63,3 +63,8 @@ I also removed the non-rag tools because they were confusing the model and essen
 For a while asking the agent a question about information that cannot be found in the knowledge base created an infinite loop where the critic kept insisting to look for more information in the knowledge base. I managed to fix this by changing the list of responses the critic may choose from. Instead of "yes" or "no", referring to whether there is enough information, the critic now respons with "enough", "more", or "exhausted". This gives the critic the explicit option to decide additional searches are unlikely to produce new information. Additionally, the critic's decision making also improved by specifying in the system prompt that "more" means more information should be collected specifically from the knowledge base. 
 
 What's interesting is that logging the reasoning from the critic also shows that it looks at how tools were used previously in the session and decides to respond with "exhausted" based on what's already been tried.
+
+### Lesson 12: Upgrading the planner
+The goal of this model was to upgrade the planner so that instead of going through the same motions every iteration, it dynamically creates and updates a plan based on the information it has gathered so far.
+
+First I updated some terminology in the files: the pydantic model classes now have Model in their names for clarity, and the json_schema attribute of the tools in the tool registry is renamed to response_model to better reflect that the associated value is a pydantic model class. To reflect this change in the file names, I also renamed the schema.py files to models.py.

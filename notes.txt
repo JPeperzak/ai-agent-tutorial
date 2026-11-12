@@ -16,6 +16,10 @@ Learn about:
 
 
 ----- TO DO -----
+- Update dict typings
+    - See if there is a way that you can specify specific keys that a dict should have, and what
+        type of value can be assigned to the specific key.
+
 - Update the tool registry
     - Consider removing the file_tools and expanding on the rag_tools 
         because the file_tools don't really serve a function and possibly
