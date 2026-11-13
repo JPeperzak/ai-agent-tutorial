@@ -11,7 +11,16 @@ You can use the following command to download the qwen3 model with 4 billion par
 Learn about:
     X Prevent the model from using an already used tool/argument combination
     - Gathering information through external sources
-    - Replanning
+        V replace search_documents, read_document, and semantic_search with a singular tool called retrieve_knowledge
+        V Add information extraction
+        4 Add web search
+        5 Add URL Reading
+        6 Add local file support
+        7 Add a persistent knowledge index (database: ChromaDB)
+        8 Add research loops
+
+    - Allowing the planner to perform replanning when steps are depleted but the critic is not yet satisfied
+    - Improving the chunking by implementing paragraph-aware splitting.
     - Persistent memory
     - Improving prompts
 

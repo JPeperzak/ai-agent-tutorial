@@ -82,3 +82,11 @@ I also added some other improvements to the code:
 - I refactored the user prompt generators by creating one function for all user prompts instead of one function for each prompt. Exception to this is the generate_arguments user prompt generator because this user prompt has a different structure to the other ones.
 
 ### Lesson 13: Accessing external sources for information
+Before implementing any external sources I upgraded the data processing of my agent. I implemented the following things:
+- Added a folder data_processing that contains all files related to preparing data.
+- Instead of embedding entire documents, the agent now separates documents into chunks and embeds the chunks instead.
+- The semantic_search tool now returns a formatted string containing organized metadata of the top 5 most similar chunks from the knowledge files.
+
+I also removed the read_document and search_documents tools, considering these functionalities are already built into semantic_search. I renamed the last remaining tool from semantic_search to retrieve_knowledge to better signify that this tool is the main tool for collecting knowledge from the knowledge files.
+
+On top of that I also created a centralized place in the agents folder where all models will be stored. This 'models' folder will make it easier to find all models quickly and saves me the headache of finding models files all around the project to see where the model class is that I need.
