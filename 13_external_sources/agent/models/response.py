@@ -17,18 +17,12 @@ class CriticDecisionModel(BaseModel):
     reasoning: str
     missing_information: str
 
-class SelectedToolModel(BaseModel):
-    response: Literal[    
-        "retrieve_knowledge"
-    ]
-
 class FinalAnswerModel(BaseModel):
     response: str
 
 # Models used for extract_facts() 
 class FactModel(BaseModel):
     statement: str
-    source: str
 
 class FactExtractionModel(BaseModel):
     facts: list[FactModel]

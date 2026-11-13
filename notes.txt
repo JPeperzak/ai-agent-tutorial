@@ -13,7 +13,7 @@ Learn about:
     - Gathering information through external sources
         V replace search_documents, read_document, and semantic_search with a singular tool called retrieve_knowledge
         V Add information extraction
-        4 Add web search
+        V Add web search
         5 Add URL Reading
         6 Add local file support
         7 Add a persistent knowledge index (database: ChromaDB)

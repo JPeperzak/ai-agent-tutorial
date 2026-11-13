@@ -1,4 +1,3 @@
-from typing import List, Dict
 from pathlib import Path
 
 from agent.models.response import (
@@ -12,13 +11,18 @@ from agent.models.data_types import (
 
 # The memory class has several storage lists:
 #   - executed_actions is a list containing dictionaries structured {tool_name: {argument1: value1, argument2: value2, etc..}}
-#   - observations contains all other observations. It might be useful to bring more structure to this.
 class Memory:
     def __init__(self):
-        self.observations: List[str] = []
-        self.executed_actions: List[Dict[str, Dict]] = []
+        self.observations: list[str] = []
+        self.executed_actions: list[dict[str, dict]] = []
         self.plan: PlanModel | None = None
         self.facts: list[MemoryFact] = []
+    
+    def reset(self) -> None:
+        self.observations = []
+        self.executed_actions = []
+        self.plan = None
+        self.facts = []
 
     def add_observation(self, observation: str) -> None:
         self.observations.append(
@@ -28,7 +32,7 @@ class Memory:
     def get_observations(
             self,
             last_k: int | None = None,
-        ) -> List[str]:
+        ) -> list[str]:
         if last_k:
             index = last_k * -1
             return self.observations[index:]
@@ -40,10 +44,10 @@ class Memory:
         ) -> str:
         return "\n\n".join(self.get_observations(last_k))
 
-    def add_executed_actions(self, executed_action: Dict[str, Dict]) -> None:
+    def add_executed_actions(self, executed_action: dict[str, dict]) -> None:
         self.executed_actions.append(executed_action)
 
-    def get_executed_actions(self) -> List[Dict[str, Dict]]:
+    def get_executed_actions(self) -> list[dict[str, dict]]:
         return self.executed_actions
 
     def get_executed_actions_text(self) -> str:

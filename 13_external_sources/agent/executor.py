@@ -16,7 +16,6 @@ from agent.prompts.constants import (
 from agent.models.response import (
     CriticDecisionModel,
     FinalAnswerModel,
-    SelectedToolModel
 )
 
 from agent.models.response import (
@@ -27,14 +26,16 @@ from agent.models.response import (
 
 from agent.brain import Brain
 from agent.memory import Memory
-from typing import Dict, Any, List
+
+from pydantic import create_model
+from typing import Any, Literal
 
 class Executor:
     def __init__(
             self,
             brain: Brain, 
             memory: Memory,
-            tool_registry: Dict[str, Dict[str, Any]],
+            tool_registry: dict[str, dict[str, Any]],
             goal: str
         ):
         self.brain = brain
@@ -50,31 +51,28 @@ class Executor:
             facts=self.memory.get_facts(),
             executed_actions_text=executed_actions_text, 
         )
-        decision = self.brain.think(
+        validated_decision = self.brain.think_structured(
             user_prompt = user_prompt,
             system_prompt = SYSTEM_PROMPT_CRITIC_ASSESSMENT,
             temperature = 0.5,
-            response_schema = CriticDecisionModel.model_json_schema(),
+            response_model = CriticDecisionModel,
             think = False
         )
-        validated_decision = CriticDecisionModel.model_validate_json(decision)
         self.memory.add_observation(f"Critic feedback: {validated_decision.reasoning}. Missing information: {validated_decision.missing_information}")
         return False if validated_decision.response.lower() == "more" else True
 
     def generate_final_answer(self) -> str:
-        observations_text = self.memory.get_observations_text()
         user_prompt = generate_user_prompt(
             goal=self.goal, 
-            observations_text=observations_text
+            facts=self.memory.get_facts(),
         )
-        decision = self.brain.think(
+        validated_final_answer = self.brain.think_structured(
             user_prompt = user_prompt,
             system_prompt = SYSTEM_PROMPT_FINAL_ANSWER,
             temperature = 0.5,
-            response_schema = FinalAnswerModel.model_json_schema(),
+            response_model = FinalAnswerModel,
             think = False
         )
-        validated_final_answer = FinalAnswerModel.model_validate_json(decision)
         return validated_final_answer.response
 
     def select_tool(self) -> str:
@@ -91,17 +89,18 @@ class Executor:
             executed_actions_text=executed_actions_text, 
             tool_registry=self.tool_registry
         )
-        decision = self.brain.think(
+        tool_names = tuple(self.tool_registry.keys())
+        SelectedToolModel = create_model("SelectedToolModel", response=(Literal[tool_names]))
+        validated_selected_tool = self.brain.think_structured(
             user_prompt = user_prompt,
             system_prompt = SYSTEM_PROMPT_SELECT_TOOL,
             temperature = 0.5,
-            response_schema = SelectedToolModel.model_json_schema(),
+            response_model = SelectedToolModel,
             think = False
         )
-        validated_selected_tool = SelectedToolModel.model_validate_json(decision)
         return validated_selected_tool.response
 
-    def generate_arguments(self, selected_tool: str) -> Dict:
+    def generate_arguments(self, selected_tool: str) -> dict:
         observations_text = self.memory.get_observations_text(3)
         executed_actions_text = self.memory.get_executed_actions_text()
         plan_text = "\n".join([f"{i}. {step.model_dump()["description"]}" for i, step in enumerate(self.memory.get_plan().steps, start=1)])
@@ -116,16 +115,14 @@ class Executor:
             self.tool_registry
         )
         response_model = self.tool_registry[selected_tool]["response_model"]
-        decision = self.brain.think(
+        validated_arguments = self.brain.think_structured(
             user_prompt = user_prompt,
             system_prompt = SYSTEM_PROMPT_GENERATE_ARGUMENTS,
             temperature = 0.4,
-            response_schema = response_model.model_json_schema(),
+            response_model = response_model,
             think = False
         )
-
-        validated_arguments = response_model.model_validate_json(decision).model_dump()
-        return validated_arguments
+        return validated_arguments.model_dump()
 
     def create_plan(self) -> PlanModel:
         observations_text = self.memory.get_observations_text()
@@ -133,14 +130,13 @@ class Executor:
             goal=self.goal, 
             observations_text=observations_text
         )
-        decision = self.brain.think(
+        validated_plan = self.brain.think_structured(
             user_prompt = user_prompt,
             system_prompt = SYSTEM_PROMPT_GENERATE_PLAN,
             temperature = 0.5,
-            response_schema = PlanModel.model_json_schema(),
+            response_model = PlanModel,
             think = False
         )
-        validated_plan = PlanModel.model_validate_json(decision)
         return validated_plan
 
     def decide_action_for_current_step(self) -> str:
@@ -156,14 +152,13 @@ class Executor:
             executed_actions_text=self.memory.get_executed_actions_text(),
             tool_registry=self.tool_registry
         )
-        decision = self.brain.think(
+        validated_action = self.brain.think_structured(
             user_prompt=user_prompt,
             system_prompt=SYSTEM_PROMPT_DECIDE_ACTION,
             temperature=0.5,
-            response_schema=ActionSelectionModel.model_json_schema(),
+            response_model=ActionSelectionModel,
             think = False
         )
-        validated_action = ActionSelectionModel.model_validate_json(decision)
         observation = f"""Action selected: '{validated_action.action}' 
 Step: {self.memory.get_current_step().description}
 Reason: {validated_action.reasoning}"""
@@ -173,14 +168,13 @@ Reason: {validated_action.reasoning}"""
     def extract_facts(
             self,
             retrieved_information: str
-    ) -> Dict[str, List[str]]:
+    ) -> dict[str, list[str]]:
         user_prompt = generate_facts_user_prompt(retrieved_information)
-        response = self.brain.think(
+        validated_facts = self.brain.think_structured(
             user_prompt=user_prompt,
             temperature = 0.5,
-            response_schema = FactExtractionModel.model_json_schema(),
+            response_model = FactExtractionModel,
             think = False
         )
-        validated_facts = FactExtractionModel.model_validate_json(response)
         facts_object = validated_facts.model_dump()
         return facts_object

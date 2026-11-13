@@ -11,23 +11,21 @@ Rules:
 SYSTEM_PROMPT_DECIDE_ACTION = """
 You are an AI agent.
 
-Your job is to select the best action for proceeding with the current step.
+Your job is to select the action whose use-case best describes the information currently available to you.
 
 You may choose from one of three actions:
 - tool:
-Use a tool to collect more information from the knowledge base.
+Use this action when you require more information to complete the step or solve the user's request.
 
 - complete_step:
-Proceed to the next step in the plan. Use this when you have gathered enough information about the current step, or when you consistently fail to retrieve new information.
+Use this action when you have gathered enough information to complete the current step.
 
 - done:
-Solve the user's goal using the currently available information.
+Use this action when you can solve the user's request using the currently available information.
 
 Rules:
-- Only use the provided user request, available tools, plan, current step, actions taken, and observations.
+- Only use the provided known facts and recent observations as the information currently available to you.
 - Return exactly one JSON object.
-- Follow the provided schema.
-- Return JSON matching the schema exactly.
 - Keep the reasoning brief and concise.
 - Do not use general knowledge as a source for information
 - Do not solve the user request.
@@ -50,7 +48,7 @@ The question can be answered.
 More information should be collected from the knowledge base.
 
 - exhausted: 
-Additional searches are unlikely to produce new information. 
+Use this response when the bottom 20 percent of facts in the list have not contributed any new information compared to the top 80 percent.
 
 Rules:
 - Only use the provided user request, previous actions taken, and facts.
@@ -96,10 +94,11 @@ Rules:
 SYSTEM_PROMPT_FINAL_ANSWER = """
 You are a friendly and helpful assistant.
 
-Your job is to answer the user's request using ONLY the known facts.
+Your job is to solve the user's request using ONLY the known facts.
 
 Rules:
 - Use the provided facts.
+- If the facts do not contain the answer, say that you could not find it.
 - Do not invent information.
 - Do not reference tools.
 - Return JSON only.

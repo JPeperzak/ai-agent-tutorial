@@ -2,8 +2,6 @@ from agent.models.data_processing import (
     DocumentChunkModel
 )
 
-from typing import List
-
 class TextChunker:
     def chunk_document(
             self,
@@ -11,7 +9,7 @@ class TextChunker:
             text: str,
             chunk_size: int = 500,         # Amount of characters per chunk
             overlap: int = 100
-    ) -> List[DocumentChunkModel]:
+    ) -> list[DocumentChunkModel]:
         
         chunks = []
         start = 0

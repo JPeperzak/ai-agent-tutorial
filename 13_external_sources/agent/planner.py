@@ -1,7 +1,7 @@
 from agent.executor import Executor
 from agent.memory import Memory
 
-from typing import Any, Dict
+from typing import Any
 
 class Planner:
     def __init__(self, memory: Memory):
@@ -37,7 +37,7 @@ Reason: All steps are completed.
     def decide_tool(
         self,
         executor: Executor,
-        tool_registry: Dict[str, Dict[str, Any]],     
+        tool_registry: dict[str, dict[str, Any]],     
     ):
         try:
             selected_tool = executor.select_tool()

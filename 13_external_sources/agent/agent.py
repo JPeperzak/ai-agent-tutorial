@@ -3,7 +3,7 @@ import traceback
 # Note that the agent. prefix is required because the path towards the files
 # is considered from the perspective of main.py, which is in the parent directory
 from agent.memory import Memory
-from agent.brain import Brain
+from agent.brain import Brain, StructuredOutputError
 from agent.planner import Planner
 from agent.executor import Executor
 from agent.tool_registry import build_tool_registry
@@ -16,7 +16,8 @@ from agent.models.response import (
     PlanStepModel
 )
 from agent.models.data_types import (
-    MemoryFact
+    MemoryFact,
+    ToolResult,
 )
 
 class Agent:
@@ -25,12 +26,13 @@ class Agent:
         self.brain = Brain()
         self.planner = Planner(self.memory)
         self.embedder = Embedder()
-        self.vector_store = VectorStore()
+        self.vector_store = VectorStore(self.embedder)
+        self.chunker = TextChunker()
         self.tool_registry = build_tool_registry(
             self.embedder,
-            self.vector_store
+            self.vector_store,
+            self.chunker
         )
-        self.chunker = TextChunker()
         self.loader = KnowledgeLoader()
         self.prepare_knowledge()
 
@@ -51,21 +53,14 @@ class Agent:
                     embedding
                 )
 
-    def load_knowledge(self):
-        documents = self.loader.load_documents("knowledge")
-        for document in documents:
-            embedding = self.embedder.embed(document["content"])
-            self.vector_store.add_document(
-                document["filename"],
-                document["content"],
-                embedding
-            )
-
     def answer_question(
         self,
         goal: str
     ):
-        MAX_STEPS = 10
+        self.memory.reset()
+        MAX_ITERATIONS = 25
+        MAX_TOOL_CALLS = 6
+        tool_calls = 0
         executor = Executor(
             self.brain, 
             self.memory, 
@@ -73,7 +68,7 @@ class Agent:
             goal
         )
         try:
-            for _ in range(MAX_STEPS):
+            for _ in range(MAX_ITERATIONS):
                 next_action = self.planner.decide_next_action(
                     executor,
                 )
@@ -82,6 +77,11 @@ class Agent:
                     self.memory.complete_current_step()
                     continue
                 if next_action == "tool":
+                    if tool_calls >= MAX_TOOL_CALLS:
+                        self.memory.add_observation("Tool call budget exhausted.")
+                        self.memory.log_memory()
+                        return executor.generate_final_answer()
+                    tool_calls += 1
                     result = self.planner.decide_tool(executor, self.tool_registry)
                     if result.get("error"):
                         self.memory.log_memory()
@@ -89,22 +89,37 @@ class Agent:
                     tool_name = result["tool_name"]
                     arguments = result["arguments"]
                     tool_function = self.tool_registry[tool_name]["function"]
-                    result = tool_function(**arguments)
+                    try:
+                        result = tool_function(**arguments)
+                    except Exception as e:
+                        result = ToolResult(message=f"The tool failed with an error: {e}")
+
                     observation = f"""Used tool: {tool_name} 
 With arguments: {arguments} 
-Result: {result}
+Result: {result.to_text()}
 """
                     self.memory.add_observation(observation)
-                    facts = executor.extract_facts(str(result))
-                    self.memory.add_facts(
-                        [
-                            MemoryFact(
-                                statement=fact["statement"],
-                                source=fact["source"],
-                            )
-                            for fact in facts["facts"]
-                        ]
-                    )
+                    # If there is nothing to extract, move on and let the observation tell the agent what happened
+                    if not result.has_results():
+                        continue
+
+                    # We're gonna perform one fact-extraction call per source, with the source attached in the code
+                    contents_by_source: dict[str, list[str]] = {}
+                    for passage in result.passages:
+                        contents_by_source.setdefault(passage.source, []).append(passage.content)
+
+                    for source, contents in contents_by_source.items():
+                        extracted = executor.extract_facts("\n\n".join(contents))
+                        self.memory.add_facts(
+                            [
+                                MemoryFact(
+                                    statement=fact["statement"],
+                                    source=source,
+                                )
+                                for fact in extracted["facts"]
+                            ]
+                        )
+
                 if next_action == "done":
                     finished = executor.assess_information()
                     if finished:
@@ -121,6 +136,9 @@ Result: {result}
                     #     updated_plan
                     # )
                     continue
+        except StructuredOutputError as e:
+            self.memory.log_memory()
+            return f"I could not get a valid response from the model: {e}"
         except BaseException as e:
             self.memory.log_memory()
             print("An error occurred:")

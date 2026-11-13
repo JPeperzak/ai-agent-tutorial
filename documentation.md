@@ -90,3 +90,17 @@ Before implementing any external sources I upgraded the data processing of my ag
 I also removed the read_document and search_documents tools, considering these functionalities are already built into semantic_search. I renamed the last remaining tool from semantic_search to retrieve_knowledge to better signify that this tool is the main tool for collecting knowledge from the knowledge files.
 
 On top of that I also created a centralized place in the agents folder where all models will be stored. This 'models' folder will make it easier to find all models quickly and saves me the headache of finding models files all around the project to see where the model class is that I need.
+
+During the creation of this model I also started using Claude instead of Copilot because Copilot kept crashing. Claude made it surprisingly easy to get feedback on the project because it allows you to upload files through a public github repo. After going through the project files Claude came with some quick issues in the code that could be easily resolved with minor changes. After implementing the minor changes I continued with the tutorial on accessing external sources that Claude generated for me.
+
+The tutorial from Claude introduced quite some changes that dramatically improved the performance of the Agent:
+- Two new tools are introduced: search_wikipedia, which collects relevant information from Wikipedia, and search_web, which performs a web search comparable to search engines.
+- The descriptions of the tools make clear to the model that it should first run retrieve_knowledge to get information locally, then run search_wikipedia to get information from wikipedia, and if still more information is required, the model can run seach_web.
+- The brain now has an extra method called think_structured, which validates the output from the model against a schema and prompts the model to correct the JSON object if it does not pass the validation. 
+- Basically: think_structured is for any response for which validation is desired. This includes responses that follow specific format criteria such as JSON objects with specific keys. The think method is for any simple responses that do not require validation.
+- We implemented proper error handling so that the agent does not crash when it encounters an error. 
+- In the process of implementing these features there were also quite a few refactors across the files. I will not go into detail about this.
+
+The above changes dramatically improved the performance of the agent. Where it first struggled to consistently answer any of the questions in main.py, it now consistently manages to generate a proper answer to all of them. I think this is mainly due to two factors:
+- The extra tools for information gathering allow the model to acquire information about anything that can be found in text on the internet. This enables the model to progress steps that it was not able to progress with only the retrieve_knowledge tool.
+- Giving the model the opportunity to correct invalid json output drastically reduced the impact of a mistake on the model's side. This would occasionally happen, crashing the agent even if it did use the correct tool/arguments combo. Now that the model can correct itself these crashes will be much less of an issue, increasing the amount of successful responses.

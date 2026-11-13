@@ -1,6 +1,6 @@
 import json
 
-from typing import Any, Dict, List
+from typing import Any
 from agent.models.data_types import (
     MemoryFact
 )
@@ -10,10 +10,10 @@ def generate_arguments_user_prompt(
         current_step_description: str,
         plan_text: str,
         observations_text: str, 
-        facts: List[MemoryFact],
+        facts: list[MemoryFact],
         executed_actions_text: str,
         selected_tool: str, 
-        tool_registry: Dict[str, Dict[str, Any]]
+        tool_registry: dict[str, dict[str, Any]]
     ) -> str:
     schema = tool_registry[selected_tool]["schema"]
 
@@ -47,11 +47,11 @@ RECENT OBSERVATIONS:
 def generate_user_prompt(
         goal: str,
         observations_text: str | None = None,
-        facts: List[MemoryFact] | None = None,
+        facts: list[MemoryFact] | None = None,
         current_step_description: str | None = None,
         plan_text: str | None = None,
         executed_actions_text: str | None = None,
-        tool_registry: Dict[str, Dict[str, Any]] | None = None,
+        tool_registry: dict[str, dict[str, Any]] | None = None,
 ) -> str:
     if tool_registry:
         tools = []

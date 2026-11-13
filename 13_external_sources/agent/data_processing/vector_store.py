@@ -3,17 +3,22 @@ from sklearn.metrics.pairwise import cosine_similarity
 from numpy.typing import NDArray
 import numpy as np
 
-from typing import Any, List, Dict
+from agent.data_processing.embedder import Embedder
 
 from agent.models.data_processing import (
     VectorEntryModel, 
     DocumentChunkModel,
 )
 
-class VectorStore:
-    def __init__(self):
-        self.entries: List[VectorEntryModel] = []
+from agent.models.data_types import RetrievedPassage
 
+class VectorStore:
+    def __init__(self, embedder: Embedder):
+        self.embedder = embedder
+        self.entries: list[VectorEntryModel] = []
+
+    # I think it's possible to rewrite this so that embedding is no longer
+    # a required parameter, now that we pass embedder in the constructor we should be able to make our own embedding.
     def add(
             self,
             chunk: DocumentChunkModel,
@@ -30,10 +35,12 @@ class VectorStore:
 
     def search(
         self,
-        query_embedding: NDArray[np.float32],
-        top_k: int = 5
-    ) -> str:
-        results: List[Dict[str, Any]] = []
+        query: str,
+        top_k: int = 5,
+        min_similarity: float = 0.25,           # TO DO: Run a few test queries and see where relevant and irrelevant chunks fall for your embedded model, then adjust the value.
+    ) -> list[RetrievedPassage]:
+        results = []
+        query_embedding = self.embedder.embed(query)
 
         for vector_entry in self.entries:
             vector_entry_object = vector_entry.model_dump()
@@ -53,6 +60,8 @@ class VectorStore:
             key=lambda result: result["similarity"],
             reverse=True
         )
-        content = results[:top_k]
-        content_formatted = [f"RESULT {i}:\nFile: {result["filename"]}\nChunk: {result["chunk_index"]}\nContent: {result["content"]}" for i, result in enumerate(content, start=1)]
-        return "--- start of retrieve_knowledge results ---\n" + "\n\n".join(content_formatted) + "\n--- end of retrieve_knowledge results ---"
+        return [
+            RetrievedPassage(source=r["filename"], content=r["content"])
+            for r in results[:top_k]
+            if r["similarity"] >= min_similarity
+        ]
