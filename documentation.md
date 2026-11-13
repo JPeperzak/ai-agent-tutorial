@@ -104,3 +104,6 @@ The tutorial from Claude introduced quite some changes that dramatically improve
 The above changes dramatically improved the performance of the agent. Where it first struggled to consistently answer any of the questions in main.py, it now consistently manages to generate a proper answer to all of them. I think this is mainly due to two factors:
 - The extra tools for information gathering allow the model to acquire information about anything that can be found in text on the internet. This enables the model to progress steps that it was not able to progress with only the retrieve_knowledge tool.
 - Giving the model the opportunity to correct invalid json output drastically reduced the impact of a mistake on the model's side. This would occasionally happen, crashing the agent even if it did use the correct tool/arguments combo. Now that the model can correct itself these crashes will be much less of an issue, increasing the amount of successful responses.
+
+### Lesson 14: Another refactor
+Considering how much the project has grown in the past few lessons, I think it's time for another refactor of the code. This time the goal is to improve the code's readability and learn how to write better and more professional code in Python.

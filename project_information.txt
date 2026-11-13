@@ -1,0 +1,2 @@
+--- PROJECT INFORMATION ---
+- This project is run with Python version 3.12.10
