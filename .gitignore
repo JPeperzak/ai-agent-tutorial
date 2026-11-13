@@ -14,3 +14,4 @@ __pycache__/
 # Model caches (optional, can be huge)
 vector_store/
 # models/
+observations.txt

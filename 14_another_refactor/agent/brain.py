@@ -87,6 +87,6 @@ class Brain:
                     f"Return a corrected JSON object that matches the schema exactly."
                 )
 
-            raise StructuredOutputError(
-                f"No valid {response_model.__name__} after {max_retries} attempts."
-            ) from last_error
+        raise StructuredOutputError(
+            f"No valid {response_model.__name__} after {max_retries} attempts."
+        ) from last_error

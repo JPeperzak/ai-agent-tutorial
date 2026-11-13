@@ -41,7 +41,7 @@ Reason: All steps are completed.
     ):
         try:
             selected_tool = executor.select_tool()
-        except BaseException as e:
+        except Exception as e:
             return {"error": f"ERROR SELECTING TOOL\n{str(e)}"}
 
         # If the selected tool requires arguments, generate them
@@ -52,5 +52,5 @@ Reason: All steps are completed.
             else:
                 validated_arguments = {}
             return {"tool_name": selected_tool, "arguments": validated_arguments}
-        except BaseException as e:
+        except Exception as e:
             return {"error": f"ERROR SELECTING TOOL\n{str(e)}"}

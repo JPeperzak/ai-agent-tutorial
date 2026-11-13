@@ -139,11 +139,11 @@ Result: {result.to_text()}
         except StructuredOutputError as e:
             self.memory.log_memory()
             return f"I could not get a valid response from the model: {e}"
-        except BaseException as e:
+        except Exception as e:
             self.memory.log_memory()
             print("An error occurred:")
             traceback.print_exc()
-            return ""
+            return f"An unexpected error occurred: {e}"
 
         self.memory.log_memory()
         return ("Reached maximum number of iterations.")
