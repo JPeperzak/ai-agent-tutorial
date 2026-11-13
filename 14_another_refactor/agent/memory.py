@@ -6,7 +6,8 @@ from agent.models.response import (
 )
 
 from agent.models.data_types import (
-    MemoryFact
+    MemoryFact,
+    ExecutedAction,
 )
 
 # The memory class has several storage lists:
@@ -14,14 +15,14 @@ from agent.models.data_types import (
 class Memory:
     def __init__(self):
         self.observations: list[str] = []
-        self.executed_actions: list[dict[str, dict]] = []
-        self.plan: PlanModel | None = None
+        self.executed_actions: list[ExecutedAction] = []
+        self.plan: PlanModel = PlanModel(steps=[])
         self.facts: list[MemoryFact] = []
     
     def reset(self) -> None:
         self.observations = []
         self.executed_actions = []
-        self.plan = None
+        self.plan = PlanModel(steps=[])
         self.facts = []
 
     def add_observation(self, observation: str) -> None:
@@ -44,35 +45,26 @@ class Memory:
         ) -> str:
         return "\n\n".join(self.get_observations(last_k))
 
-    def add_executed_actions(self, executed_action: dict[str, dict]) -> None:
+    def add_executed_actions(self, executed_action: ExecutedAction) -> None:
         self.executed_actions.append(executed_action)
 
-    def get_executed_actions(self) -> list[dict[str, dict]]:
+    def get_executed_actions(self) -> list[ExecutedAction]:
         return self.executed_actions
 
     def get_executed_actions_text(self) -> str:
-        text = ""
-        executed_actions = self.get_executed_actions()
-        for tool in executed_actions:
-            selected_tool, action_arguments = next(iter(tool.items()))
-            text += (f"- {selected_tool}({", ".join(f"{key}={value}" for key, value in action_arguments.items())})\n")
-        return text.rstrip()
+        return "\n".join(a.to_text() for a in self.executed_actions)
 
     def set_plan(self, plan: PlanModel) -> None:
         self.plan = plan
 
-    def get_plan(self) -> PlanModel | None:
+    def get_plan(self) -> PlanModel:
         return self.plan
 
-    def get_current_step(self) -> PlanStepModel | None:
-        if not self.plan:
-            return None
-        
-        for step in self.plan.steps:
-            if not step.completed:
-                return step
-
-        return None
+    def get_current_step(self) -> PlanStepModel:        
+        next_step = next((step for step in self.plan.steps if not step.completed), None)
+        if next_step is None:
+            raise RuntimeError("Expected an uncompleted plan step, but all steps are completed.")
+        return next_step    
 
     def complete_current_step(self) -> None:
         current_step = self.get_current_step()

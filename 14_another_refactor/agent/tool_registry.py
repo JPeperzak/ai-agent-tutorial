@@ -8,45 +8,51 @@ from agent.models.tools import (
     SearchWebModel,
 )
 
+from agent.models.data_types import (
+    ToolRegistry,
+    Tool,
+)
+
 from agent.data_processing.embedder import Embedder
 from agent.data_processing.vector_store import VectorStore
 from agent.data_processing.chunker import TextChunker
 
-from typing import Any
 
 # When creating a new tool, make sure to create a BaseModel for it in tools.schemas.py
 def build_tool_registry(
     embedder: Embedder,
     vector_store: VectorStore,
     chunker: TextChunker,
-) -> dict[str, dict[str, Any]]:
-    # Notice how we can actually generate the schema using the model when we add 
-    #   description fields to the attributes in the model definition.
-    return {
-        "retrieve_knowledge": {
-            "function": RetrieveKnowledgeTool(vector_store),
-            "description": (
-                    "Retrieve information from the local "
-                    "knowledge base using semantic search. "
-                    "Use this first whenever information is needed "
-                    "to answer a question."
+) -> ToolRegistry:
+    tools = [
+        Tool(
+            name="retrieve_knowledge",
+            description=(
+                "Retrieve information from the local knowledge base using semantic search. "
+                "Use this first whenever information is needed to answer a question."
             ),
-            "schema": RetrieveKnowledgeModel.model_json_schema(),     
-            "response_model": RetrieveKnowledgeModel,      
-        },
-        "search_wikipedia": {
-            "function": SearchWikipediaTool(embedder, chunker),
-            "description": (
+            function=RetrieveKnowledgeTool(vector_store),
+            args_model=RetrieveKnowledgeModel,
+        ),
+        Tool(
+            name="search_wikipedia",
+            description=(
                 "Look up a Wikipedia article and return its most relevant passages. "
                 "Use this when the local knowledge base lacks the needed information."
             ),
-            "schema": SearchWikipediaModel.model_json_schema(),
-            "response_model": SearchWikipediaModel,
-        },
-        "search_web": {
-            "function": SearchWebTool(embedder, chunker),
-            "description": "Search the web for recent, niche or practical information (versions, how-tos, news). Use when the local knowledge base and Wikipedia did not help.",
-            "schema": SearchWebModel.model_json_schema(),
-            "response_model": SearchWebModel,
-        }
-    }
+            function=SearchWikipediaTool(embedder, chunker),
+            args_model=SearchWikipediaModel,
+        ),
+        Tool(
+            name="search_web",
+            description=(
+                "Search the web for recent, niche or practical information (versions, how-tos, news). "
+                "Use when the local knowledge base and Wikipedia did not help."
+            ),
+            function=SearchWebTool(embedder, chunker),
+            args_model=SearchWebModel,
+        ),
+    ]
+    # By turning the list into a dict rather than writing the dict out, you only have to type out every name once.
+    #   This reduces the chance of errors due to typo's and thus ensures the key and name are the same.
+    return {tool.name: tool for tool in tools}

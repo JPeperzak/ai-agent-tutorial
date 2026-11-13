@@ -2,7 +2,8 @@ import json
 
 from typing import Any
 from agent.models.data_types import (
-    MemoryFact
+    MemoryFact,
+    ToolRegistry,
 )
 
 from agent.prompts.helpers import format_facts
@@ -15,9 +16,9 @@ def generate_arguments_user_prompt(
         facts: list[MemoryFact],
         executed_actions_text: str,
         selected_tool: str, 
-        tool_registry: dict[str, dict[str, Any]]
+        tool_registry: ToolRegistry,
     ) -> str:
-    schema = tool_registry[selected_tool]["schema"]
+    schema = tool_registry[selected_tool].schema
 
     return f"""USER REQUEST:
 {goal}
@@ -51,14 +52,13 @@ def generate_user_prompt(
         current_step_description: str | None = None,
         plan_text: str | None = None,
         executed_actions_text: str | None = None,
-        tool_registry: dict[str, dict[str, Any]] | None = None,
+        tool_registry: ToolRegistry | None = None,
 ) -> str:
+    tools = []
     if tool_registry:
-        tools = []
-        
         for name, tool in tool_registry.items():
             tools.append(
-                f"- {name}\n\t{tool['description']}"
+                f"- {name}\n\t{tool.description}"
             )
 
     prompt = f"USER REQUEST:\n{goal}"

@@ -1,2 +1,6 @@
 --- PROJECT INFORMATION ---
 - This project is run with Python version 3.12.10
+
+--- INTERESTING PACKAGES ---
+- pyright
+    Allows you to run "pyright <folder name>" in the terminal to get a log of various potential improvements for your code. 

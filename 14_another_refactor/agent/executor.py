@@ -14,28 +14,29 @@ from agent.prompts.constants import (
 )
 
 from agent.models.response import (
+    PlanModel,
+    ActionSelectionModel,
+    FactExtractionModel,
+    CriticVerdict,
+    Action,
     CriticDecisionModel,
     FinalAnswerModel,
 )
 
-from agent.models.response import (
-    PlanModel,
-    ActionSelectionModel,
-    FactExtractionModel
-)
+from agent.models.data_types import ToolRegistry
 
 from agent.brain import Brain
 from agent.memory import Memory
 
-from pydantic import create_model
-from typing import Any, Literal
+from pydantic import AfterValidator, BaseModel, Field
+from typing import Any, Annotated
 
 class Executor:
     def __init__(
             self,
             brain: Brain, 
             memory: Memory,
-            tool_registry: dict[str, dict[str, Any]],
+            tool_registry: ToolRegistry,
             goal: str
         ):
         self.brain = brain
@@ -59,7 +60,7 @@ class Executor:
             think = False
         )
         self.memory.add_observation(f"Critic feedback: {validated_decision.reasoning}. Missing information: {validated_decision.missing_information}")
-        return False if validated_decision.response.lower() == "more" else True
+        return validated_decision.response is not CriticVerdict.MORE
 
     def generate_final_answer(self) -> str:
         user_prompt = generate_user_prompt(
@@ -89,8 +90,19 @@ class Executor:
             executed_actions_text=executed_actions_text, 
             tool_registry=self.tool_registry
         )
-        tool_names = tuple(self.tool_registry.keys())
-        SelectedToolModel = create_model("SelectedToolModel", response=(Literal[tool_names]))
+        # Some wizardry to ensure we can dynamically apply the enum limitation to the response attribute of the response model
+        tool_names = set(self.tool_registry.keys())
+        def validate_tool(v: str) -> str:
+            if v not in tool_names:
+                raise ValueError(f"Must be one of {tool_names}")
+            return v
+        class SelectedToolModel(BaseModel):
+            response: Annotated[
+                str,
+                AfterValidator(validate_tool),
+                Field(json_schema_extra={"enum": list(tool_names)}),
+            ]
+
         validated_selected_tool = self.brain.think_structured(
             user_prompt = user_prompt,
             system_prompt = SYSTEM_PROMPT_SELECT_TOOL,
@@ -100,7 +112,7 @@ class Executor:
         )
         return validated_selected_tool.response
 
-    def generate_arguments(self, selected_tool: str) -> dict:
+    def generate_arguments(self, selected_tool: str) -> dict[str, Any]:
         observations_text = self.memory.get_observations_text(3)
         executed_actions_text = self.memory.get_executed_actions_text()
         plan_text = "\n".join([f"{i}. {step.model_dump()["description"]}" for i, step in enumerate(self.memory.get_plan().steps, start=1)])
@@ -114,7 +126,7 @@ class Executor:
             selected_tool, 
             self.tool_registry
         )
-        response_model = self.tool_registry[selected_tool]["response_model"]
+        response_model = self.tool_registry[selected_tool].args_model
         validated_arguments = self.brain.think_structured(
             user_prompt = user_prompt,
             system_prompt = SYSTEM_PROMPT_GENERATE_ARGUMENTS,
@@ -139,7 +151,7 @@ class Executor:
         )
         return validated_plan
 
-    def decide_action_for_current_step(self) -> str:
+    def decide_action_for_current_step(self) -> Action:
         # decide if another tool is needed, if the step is complete, or if the plan is done
         observations_text = self.memory.get_observations_text(3)
         plan_text = "\n".join([f"{i}. {step.model_dump()["description"]}" for i, step in enumerate(self.memory.get_plan().steps, start=1)])
@@ -168,7 +180,7 @@ Reason: {validated_action.reasoning}"""
     def extract_facts(
             self,
             retrieved_information: str
-    ) -> dict[str, list[str]]:
+    ) -> FactExtractionModel:
         user_prompt = generate_facts_user_prompt(retrieved_information)
         validated_facts = self.brain.think_structured(
             user_prompt=user_prompt,
@@ -176,5 +188,4 @@ Reason: {validated_action.reasoning}"""
             response_model = FactExtractionModel,
             think = False
         )
-        facts_object = validated_facts.model_dump()
-        return facts_object
+        return validated_facts

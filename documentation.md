@@ -107,3 +107,5 @@ The above changes dramatically improved the performance of the agent. Where it f
 
 ### Lesson 14: Another refactor
 Considering how much the project has grown in the past few lessons, I think it's time for another refactor of the code. This time the goal is to improve the code's readability and learn how to write better and more professional code in Python.
+
+It only just clicked in my head that pydantic's BaseModel can be used as a custom type to specify a dict with specific key values. More specifically, BaseModel can be used as a custom type for a dict with specific key values that requires validation at some point. If no validation is required, it is better to use @dataclass because it is lighter and communicates that the class is "just a container".

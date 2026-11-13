@@ -1,5 +1,16 @@
 from pydantic import BaseModel
-from typing import Literal
+from enum import StrEnum
+
+class Action(StrEnum):
+    TOOL = "tool"
+    COMPLETE_STEP = "complete_step"
+    DONE = "done"
+
+class CriticVerdict(StrEnum):
+    ENOUGH = "enough"
+    MORE = "more"
+    EXHAUSTED = "exhausted"
+
 
 class PlanStepModel(BaseModel):
     description: str
@@ -9,11 +20,11 @@ class PlanModel(BaseModel):
     steps: list[PlanStepModel]
 
 class ActionSelectionModel(BaseModel):
-    action: Literal["tool", "complete_step", "done"]
+    action: Action
     reasoning: str
 
 class CriticDecisionModel(BaseModel):
-    response: Literal["enough", "more", "exhausted"]
+    response: CriticVerdict
     reasoning: str
     missing_information: str
 

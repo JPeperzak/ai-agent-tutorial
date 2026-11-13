@@ -13,7 +13,8 @@ from agent.data_processing.vector_store import VectorStore
 from agent.data_processing.chunker import TextChunker
 
 from agent.models.response import (
-    PlanStepModel
+    PlanStepModel,
+    Action
 )
 from agent.models.data_types import (
     MemoryFact,
@@ -40,8 +41,8 @@ class Agent:
         documents = self.loader.load_documents("knowledge")
         for document in documents:
             chunks = self.chunker.chunk_document(
-                document["filename"],
-                document["content"]
+                document.file_name,
+                document.content
             )
             for chunk in chunks:
                 chunk_object = chunk.model_dump()
@@ -72,70 +73,67 @@ class Agent:
                 next_action = self.planner.decide_next_action(
                     executor,
                 )
+                match next_action:
+                    case Action.COMPLETE_STEP:
+                        self.memory.complete_current_step()
+                        continue
+                    case Action.TOOL:
+                        if tool_calls >= MAX_TOOL_CALLS:
+                            self.memory.add_observation("Tool call budget exhausted.")
+                            self.memory.log_memory()
+                            return executor.generate_final_answer()
+                        tool_calls += 1
+                        result = self.planner.decide_tool(executor, self.tool_registry)
+                        tool_name = result.tool_name
+                        arguments = result.arguments
+                        tool_function = self.tool_registry[tool_name].function
+                        try:
+                            result = tool_function(**arguments)
+                        except Exception as e:
+                            result = ToolResult(message=f"The tool failed with an error: {e}")
 
-                if next_action == "complete_step":
-                    self.memory.complete_current_step()
-                    continue
-                if next_action == "tool":
-                    if tool_calls >= MAX_TOOL_CALLS:
-                        self.memory.add_observation("Tool call budget exhausted.")
-                        self.memory.log_memory()
-                        return executor.generate_final_answer()
-                    tool_calls += 1
-                    result = self.planner.decide_tool(executor, self.tool_registry)
-                    if result.get("error"):
-                        self.memory.log_memory()
-                        return result["error"]
-                    tool_name = result["tool_name"]
-                    arguments = result["arguments"]
-                    tool_function = self.tool_registry[tool_name]["function"]
-                    try:
-                        result = tool_function(**arguments)
-                    except Exception as e:
-                        result = ToolResult(message=f"The tool failed with an error: {e}")
-
-                    observation = f"""Used tool: {tool_name} 
+                        observation = f"""Used tool: {tool_name} 
 With arguments: {arguments} 
 Result: {result.to_text()}
 """
-                    self.memory.add_observation(observation)
-                    # If there is nothing to extract, move on and let the observation tell the agent what happened
-                    if not result.has_results():
-                        continue
+                        self.memory.add_observation(observation)
+                        # If there is nothing to extract, move on and let the observation tell the agent what happened
+                        if not result.has_results():
+                            continue
 
-                    # We're gonna perform one fact-extraction call per source, with the source attached in the code
-                    contents_by_source: dict[str, list[str]] = {}
-                    for passage in result.passages:
-                        contents_by_source.setdefault(passage.source, []).append(passage.content)
+                        # We're gonna perform one fact-extraction call per source, with the source attached in the code
+                        contents_by_source: dict[str, list[str]] = {}
+                        for passage in result.passages:
+                            contents_by_source.setdefault(passage.source, []).append(passage.content)
 
-                    for source, contents in contents_by_source.items():
-                        extracted = executor.extract_facts("\n\n".join(contents))
-                        self.memory.add_facts(
-                            [
-                                MemoryFact(
-                                    statement=fact["statement"],
-                                    source=source,
-                                )
-                                for fact in extracted["facts"]
-                            ]
+                        for source, contents in contents_by_source.items():
+                            extracted = executor.extract_facts("\n\n".join(contents))
+                            self.memory.add_facts(
+                                [
+                                    MemoryFact(
+                                        statement=fact.statement,
+                                        source=source,
+                                    )
+                                    for fact in extracted.facts
+                                ]
+                            )
+
+                    case Action.DONE:
+                        finished = executor.assess_information()
+                        if finished:
+                            self.memory.log_memory()
+                            return executor.generate_final_answer()
+                        self.memory.plan.steps.append(
+                            PlanStepModel(description="Gather additional information")
                         )
+                        # INSTEAD OF ADDING A NEW STEP TO THE EXISTING PLAN, EVENTUALLY WE SHOULD
+                        # USE A .replan() METHOD TO GENERATE A NEW PLAN WITH THE AVAILABLE INFORMATION.
+                        # updated_plan = executor.replan()
 
-                if next_action == "done":
-                    finished = executor.assess_information()
-                    if finished:
-                        self.memory.log_memory()
-                        return executor.generate_final_answer()
-                    self.memory.plan.steps.append(
-                        PlanStepModel(description="Gather additional information")
-                    )
-                    # INSTEAD OF ADDING A NEW STEP TO THE EXISTING PLAN, EVENTUALLY WE SHOULD
-                    # USE A .replan() METHOD TO GENERATE A NEW PLAN WITH THE AVAILABLE INFORMATION.
-                    # updated_plan = executor.replan()
-
-                    # self.memory.set_plan(
-                    #     updated_plan
-                    # )
-                    continue
+                        # self.memory.set_plan(
+                        #     updated_plan
+                        # )
+                        continue
         except StructuredOutputError as e:
             self.memory.log_memory()
             return f"I could not get a valid response from the model: {e}"

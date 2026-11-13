@@ -1,7 +1,11 @@
 from agent.executor import Executor
 from agent.memory import Memory
-
-from typing import Any
+from agent.models.response import Action
+from agent.models.data_types import (
+    ExecutedAction,
+    ToolRegistry,
+    ToolCall,
+)
 
 class Planner:
     def __init__(self, memory: Memory):
@@ -10,8 +14,9 @@ class Planner:
     def ensure_plan_exists(
         self,
         executor: Executor     
-    ):
-        if self.memory.get_plan():
+    ) -> None:
+        current_plan = self.memory.get_plan()
+        if current_plan.steps:
             return
 
         plan = executor.create_plan()
@@ -20,37 +25,31 @@ class Planner:
     def decide_next_action(
             self,
             executor: Executor,
-    ) -> str:
+    ) -> Action:
         self.ensure_plan_exists(executor)
-        current_step = self.memory.get_current_step()
+        current_plan = self.memory.get_plan()
 
-        if current_step is None:
+        if not any(step.completed == False for step in current_plan.steps):
             observation = f"""
 Action 'done' selected.
 Reason: All steps are completed.
 """
             self.memory.add_observation(observation)
-            return 'done'
+            return Action.DONE
 
         return executor.decide_action_for_current_step()
 
     def decide_tool(
         self,
         executor: Executor,
-        tool_registry: dict[str, dict[str, Any]],     
-    ):
-        try:
-            selected_tool = executor.select_tool()
-        except Exception as e:
-            return {"error": f"ERROR SELECTING TOOL\n{str(e)}"}
+        tool_registry: ToolRegistry,     
+    ) -> ToolCall:
+        selected_tool = executor.select_tool()
 
         # If the selected tool requires arguments, generate them
-        try:
-            if len(tool_registry[selected_tool]["schema"]["properties"]) > 0:
-                validated_arguments = executor.generate_arguments(selected_tool)
-                self.memory.add_executed_actions({selected_tool: validated_arguments})
-            else:
-                validated_arguments = {}
-            return {"tool_name": selected_tool, "arguments": validated_arguments}
-        except Exception as e:
-            return {"error": f"ERROR SELECTING TOOL\n{str(e)}"}
+        if tool_registry[selected_tool].args_model.model_fields:
+            validated_arguments = executor.generate_arguments(selected_tool)
+            self.memory.add_executed_actions(ExecutedAction(tool_name=selected_tool, arguments=validated_arguments))
+        else:
+            validated_arguments = {}
+        return ToolCall(tool_name=selected_tool, arguments=validated_arguments)

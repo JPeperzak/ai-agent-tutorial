@@ -2,7 +2,8 @@
 You can use the following command to download the qwen3 model with 4 billion parameters and store it on your pc:
     ollama pull qwen3:4b
 
-
+--- INSTALLING PACKAGES EXCLUSIVELY TO THE VENV ---
+python -m pip install <package_name>
 
 ----- NEXT STEPS -----
 Learn about:
